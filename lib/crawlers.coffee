@@ -33,15 +33,30 @@ usps_checkpoint = (checkpoint) ->
 			year = chunks[0]
 			date_set = true
 		catch
-			# ensure we are not "falling apart"
+			# Ensure we are not "falling apart",
+			# try Simple scenario parsing instead 
 
 	if not date_set
 		# Simple scenario with pre-formatted date string
-		chunks = checkpoint.split ', '
-		message = chunks[0]
-		month_date = chunks[1]
-		year = chunks[2]
-		day_time = if chunks.length > 3 then chunks[3] else "12:00 am"
+		try
+			chunks = checkpoint.split ', '
+			message = chunks[0]
+			month_date = chunks[1]
+			year = chunks[2]
+			day_time = if chunks.length > 3 then chunks[3] else "12:00 am"
+		catch
+			# We failed to parse checkpoint string
+			# Here we need two actions:
+			# 1. Send email with unparsed string
+			# 2. Set default/backup values
+			# 2.1 Better to have full checkpoint string in the message
+			#     instead of error message
+			message = checkpoint
+			# 2.2 But timestamp is not known
+			month_date = '1 January'
+			day_time = '12:00 am'
+			year = '1990'
+
 
 	date = utc_date "#{month_date} #{year} #{day_time}"
 
@@ -60,8 +75,11 @@ exports.usps = (tracking_number, callback) ->
 			<TrackID ID=\"#{ tracking_number }\"></TrackID>\
 		</TrackRequest>"
 
+	# Make API call
 	request(url, (error, response, body) ->
-		if !error and response.statusCode == 200
+		if not error and response.statusCode == 200
+
+			# Parse XML
 			parseString body, (err, result) ->
 				if err
 					callback err
@@ -71,14 +89,17 @@ exports.usps = (tracking_number, callback) ->
 					last = result.TrackResponse.TrackInfo[0].TrackSummary[0]
 					checkpoints.unshift last
 					
+					# Get checkpoints in desired object model
 					for checkpoint in checkpoints
 						tracking_result.checkpoints.unshift usps_checkpoint(checkpoint)
 
 				catch error
+					# Checkpoint parsing failed
 					callback error
 
 				callback null, tracking_result
 		else if error
+			# HTTP call failed
 			callback error
 		else
 			callback new Error "HTTP returned #{ response.statusCode }"
