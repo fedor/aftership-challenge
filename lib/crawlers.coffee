@@ -81,8 +81,7 @@ exports.usps = (tracking_number, callback) ->
 
 			# Parse XML
 			parseString body, (err, result) ->
-				if err
-					callback err
+				if err then callback err
 
 				try
 					checkpoints = result.TrackResponse.TrackInfo[0].TrackDetail
