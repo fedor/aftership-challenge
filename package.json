@@ -23,7 +23,10 @@
 	"dependencies": {
 		"mocha": "latest",
 		"underscore": "latest",
-		"should": "latest"
+		"should": "latest",
+		"request": "latest",
+		"xml2js": "latest",
+		"cheerio": "latest"
 	},
 	"devDependencies": {
 		"mocha": "latest",

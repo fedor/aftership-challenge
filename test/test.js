@@ -104,73 +104,73 @@ describe('Test: .is', function() {
 	// 	});
 	// });
 
-	// describe('Track @ dpduk(\'15502370264989N\')', function() {
-	// 	// Courier: http://www.dpd.co.uk
-	// 	// Hints: Not that easy, if you can't find the magic in the cookies
-	// 	// Time need: We spent two days to dig out the magic. Once you know it, can be done within 2 hours.
+	describe('Track @ dpduk(\'15502370264989N\')', function() {
+		// Courier: http://www.dpd.co.uk
+		// Hints: Not that easy, if you can't find the magic in the cookies
+		// Time need: We spent two days to dig out the magic. Once you know it, can be done within 2 hours.
 
-	// 	var dpduk = {'checkpoints': [
-	// 		{
-	// 			country_name: 'Hub 3 - Birmingham',
-	// 			message: 'We have your parcel, and it\'s on its way to your nearest depot',
-	// 			checkpoint_time: '2014-01-08T22:33:50'
-	// 		},
-	// 		{
-	// 			country_name: 'Hub 3 - Birmingham',
-	// 			message: 'We have your parcel, and it\'s on its way to your nearest depot',
-	// 			checkpoint_time: '2014-01-08T22:34:58'
-	// 		},
-	// 		{
-	// 			country_name: 'Hub 3 - Birmingham',
-	// 			message: 'Your parcel has left the United Kingdom and is on its way to Saudi Arabia',
-	// 			checkpoint_time: '2014-01-09T03:56:57'
-	// 		},
-	// 		{
-	// 			country_name: 'United Kingdom',
-	// 			message: 'The parcel is in transit on its way to its final destination.',
-	// 			checkpoint_time: '2014-01-09T22:34:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Bahrain',
-	// 			message: 'Your parcel has arrived at the local delivery depot',
-	// 			checkpoint_time: '2014-01-10T09:39:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Bahrain',
-	// 			message: 'The parcel is in transit on its way to its final destination.',
-	// 			checkpoint_time: '2014-01-10T13:45:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Bahrain',
-	// 			message: 'The parcel is in transit on its way to its final destination.',
-	// 			checkpoint_time: '2014-01-12T13:17:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Saudi Arabia',
-	// 			message: 'Your parcel has arrived at the local delivery depot',
-	// 			checkpoint_time: '2014-01-14T06:30:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Saudi Arabia',
-	// 			message: 'Your parcel is at the local depot awaiting collection',
-	// 			checkpoint_time: '2014-01-14T21:18:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Saudi Arabia',
-	// 			message: 'Your parcel is on the vehicle for delivery',
-	// 			checkpoint_time: '2014-01-15T08:34:00'
-	// 		},
-	// 		{
-	// 			country_name: 'Saudi Arabia',
-	// 			message: 'The parcel has been delivered, signed for by BILAL',
-	// 			checkpoint_time: '2014-01-15T19:23:00'
-	// 		}
-	// 	]
-	// 	};
+		var dpduk = {'checkpoints': [
+			{
+				country_name: 'Hub 3 - Birmingham',
+				message: 'We have your parcel, and it\'s on its way to your nearest depot',
+				checkpoint_time: '2014-01-08T22:33:50'
+			},
+			{
+				country_name: 'Hub 3 - Birmingham',
+				message: 'We have your parcel, and it\'s on its way to your nearest depot',
+				checkpoint_time: '2014-01-08T22:34:58'
+			},
+			{
+				country_name: 'Hub 3 - Birmingham',
+				message: 'Your parcel has left the United Kingdom and is on its way to Saudi Arabia',
+				checkpoint_time: '2014-01-09T03:56:57'
+			},
+			{
+				country_name: 'United Kingdom',
+				message: 'The parcel is in transit on its way to its final destination.',
+				checkpoint_time: '2014-01-09T22:34:00'
+			},
+			{
+				country_name: 'Bahrain',
+				message: 'Your parcel has arrived at the local delivery depot',
+				checkpoint_time: '2014-01-10T09:39:00'
+			},
+			{
+				country_name: 'Bahrain',
+				message: 'The parcel is in transit on its way to its final destination.',
+				checkpoint_time: '2014-01-10T13:45:00'
+			},
+			{
+				country_name: 'Bahrain',
+				message: 'The parcel is in transit on its way to its final destination.',
+				checkpoint_time: '2014-01-12T13:17:00'
+			},
+			{
+				country_name: 'Saudi Arabia',
+				message: 'Your parcel has arrived at the local delivery depot',
+				checkpoint_time: '2014-01-14T06:30:00'
+			},
+			{
+				country_name: 'Saudi Arabia',
+				message: 'Your parcel is at the local depot awaiting collection',
+				checkpoint_time: '2014-01-14T21:18:00'
+			},
+			{
+				country_name: 'Saudi Arabia',
+				message: 'Your parcel is on the vehicle for delivery',
+				checkpoint_time: '2014-01-15T08:34:00'
+			},
+			{
+				country_name: 'Saudi Arabia',
+				message: 'The parcel has been delivered, signed for by BILAL',
+				checkpoint_time: '2014-01-15T19:23:00'
+			}
+		]
+		};
 
-	// 	it('Expect return true', function() {
-	// 		var result = Courier.dpduk('15502370264989N');
-	// 		result.should.eql(dpduk);
-	// 	});
-	// });
+		it('Expect return true', function() {
+			var result = Courier.dpduk('15502370264989N');
+			result.should.eql(dpduk);
+		});
+	});
 });

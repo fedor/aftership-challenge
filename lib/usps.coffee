@@ -1,6 +1,4 @@
-request = require 'request'
-{parseString} = require 'xml2js'
-user_id = "971NA0002771"
+tools = require 'tools'
 
 
 # from goo.gl/RyLeWV
@@ -13,11 +11,10 @@ utc_date = (date_string) ->
 		date.getHours(),
 		date.getMinutes(),
 		date.getSeconds())
-	date = date.toISOString()
-	date = date.substring(0, date.length-5)
+	date = date.toISOString().substring(0, date.length-5)
 
 
-usps_checkpoint = (checkpoint) ->
+get_checkpoint = (checkpoint) ->
 	date_set = false
 	chunks = checkpoint.split ' at '
 
@@ -57,7 +54,6 @@ usps_checkpoint = (checkpoint) ->
 			day_time = '12:00 am'
 			year = '1990'
 
-
 	date = utc_date "#{month_date} #{year} #{day_time}"
 
 	# return tracking object
@@ -66,43 +62,32 @@ usps_checkpoint = (checkpoint) ->
 	checkpoint_time: date
 
 
-exports.usps = (tracking_number, callback) ->
-	tracking_result = 
-		checkpoints: []
+exports = (tracking_number, callback) ->
+	api_key = "971NA0002771"
+	result = checkpoints: []
 
 	url = "http://production.shippingapis.com/ShippingAPI.dll?API=TrackV2&XML=\
-		<TrackRequest USERID=\"#{ user_id }\">\
-			<TrackID ID=\"#{ tracking_number }\"></TrackID>\
+		<TrackRequest USERID=\"#{api_key}\">\
+			<TrackID ID=\"#{tracking_number}\"></TrackID>\
 		</TrackRequest>"
 
 	# Make API call
-	request(url, (error, response, body) ->
-		if not error and response.statusCode == 200
+	tools.request_xml url, (error, body) ->
+		return callback error if error
 
-			# Parse XML
-			parseString body, (err, result) ->
-				if err then callback err
-
-				try
-					checkpoints = result.TrackResponse.TrackInfo[0].TrackDetail
-					last = result.TrackResponse.TrackInfo[0].TrackSummary[0]
-					checkpoints.unshift last
-					
-					# Get checkpoints in desired object model
-					for checkpoint in checkpoints
-						tracking_result.checkpoints.unshift usps_checkpoint(checkpoint)
-
-				catch error
-					# Checkpoint parsing failed
-					callback error
-
-				callback null, tracking_result
-		else if error
-			# HTTP call failed
+		try
+			track_info = result.TrackResponse.TrackInfo[0]
+			track_summary = track_info.TrackSummary[0]
+			points = track_info.TrackDetail.reverse()
+			points.push track_summary
+			
+			# Get checkpoints in desired object model
+			result.checkpoints = (get_checkpoint point for point in points)
+			callback null, result
+		catch error
+			# Checkpoint parsing failed
 			callback error
-		else
-			callback new Error "HTTP returned #{ response.statusCode }"
-	)
+
 
 # Dev run command
 # this.usps('9405903699300184125060')
