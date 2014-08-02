@@ -1,13 +1,15 @@
-tools = require 'tools'
+tools = require './tools'
 
 get_checkpoint = (checkpoint) ->
+	time = checkpoint.trackingEventDate
+
 	# return tracking object
 	country_name: checkpoint.trackingEventLocation
 	message: checkpoint.trackingEventStatus
-	checkpoint_time: checkpoint.trackingEventDate.substring(0, date.length-5)
+	checkpoint_time: time.substring(0, time.length-5)
 
 
-exports = (tracking_number, callback) ->
+exports.dpduk = (tracking_number, callback) ->
 	result = checkpoints: []
 
 	url_4_api_id = "http://www.dpd.co.uk/esgServer/shipping/shipment/_/parcel/\
@@ -28,6 +30,7 @@ exports = (tracking_number, callback) ->
 				return callback error if error
 				try
 					points = json.obj.trackingEvent.reverse()
+					
 					# Get checkpoints in desired object model
 					result.checkpoints = (get_checkpoint p for p in points)
 					callback null, result
@@ -38,4 +41,4 @@ exports = (tracking_number, callback) ->
 
 
 # Dev run command
-# this.usps('9405903699300184125060')
+# exports('15502370264989N')

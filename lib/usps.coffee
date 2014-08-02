@@ -1,4 +1,4 @@
-tools = require 'tools'
+tools = require './tools'
 
 
 # from goo.gl/RyLeWV
@@ -11,7 +11,8 @@ utc_date = (date_string) ->
 		date.getHours(),
 		date.getMinutes(),
 		date.getSeconds())
-	date = date.toISOString().substring(0, date.length-5)
+	date = date.toISOString()
+	date.substring(0, date.length-5)
 
 
 get_checkpoint = (checkpoint) ->
@@ -62,7 +63,7 @@ get_checkpoint = (checkpoint) ->
 	checkpoint_time: date
 
 
-exports = (tracking_number, callback) ->
+exports.usps = (tracking_number, callback) ->
 	api_key = "971NA0002771"
 	result = checkpoints: []
 
@@ -76,7 +77,7 @@ exports = (tracking_number, callback) ->
 		return callback error if error
 
 		try
-			track_info = result.TrackResponse.TrackInfo[0]
+			track_info = body.TrackResponse.TrackInfo[0]
 			track_summary = track_info.TrackSummary[0]
 			points = track_info.TrackDetail.reverse()
 			points.push track_summary

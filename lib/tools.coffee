@@ -14,14 +14,14 @@ get = (request_args..., callback) ->
 
 
 exports.request_xml = (request_args..., callback) ->
-	get.apply this, request_args.concat (error, body) ->
+	get.apply null, request_args.concat (error, body) ->
 		return callback error if error
 
 		parseString body, callback  # Parse XML
 
 
 exports.request_json = (request_args..., callback) ->
-	get.apply this, request_args.concat (error, body) ->
+	get.apply null, request_args.concat (error, body) ->
 		return callback error if error
 
 		try
@@ -32,14 +32,14 @@ exports.request_json = (request_args..., callback) ->
 
 
 exports.request_html_get = (request_args..., callback) ->
-	get.apply this, request_args.concat (error, body) ->
+	get.apply null, request_args.concat (error, body) ->
 		return callback error if error
 
 		callback null, cheerio.load(body)  # get DOM
 
 
 exports.request_form_submit = (request_args..., callback) ->
-	request.post.apply this, request_args.concat (error, response, body) ->
+	request.post.apply request, request_args.concat (error, response, body) ->
 		# HTTP call failed
 		return callback error if error
 		if response.statusCode != 200

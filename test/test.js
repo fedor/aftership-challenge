@@ -47,7 +47,7 @@ describe('Test: .is', function() {
 			Courier.usps('9405903699300184125060', function(err, result) {
 				if (err) return done(err);
 				result.should.eql(usps);
-				done();	
+				done();
 			});
 		});
 	});
@@ -168,9 +168,12 @@ describe('Test: .is', function() {
 		]
 		};
 
-		it('Expect return true', function() {
-			var result = Courier.dpduk('15502370264989N');
-			result.should.eql(dpduk);
+		it('Expect return true', function(done) {
+			var result = Courier.dpduk('15502370264989N', function(err, result) {
+				if (err) return done(err);
+				result.should.eql(dpduk);
+				done();
+			});
 		});
 	});
 });
