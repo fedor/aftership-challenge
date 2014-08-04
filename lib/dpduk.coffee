@@ -41,4 +41,4 @@ exports.dpduk = (tracking_number, callback) ->
 
 
 # Dev run command
-# exports('15502370264989N')
+# exports.dpduk('15502370264989N')

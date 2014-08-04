@@ -56,53 +56,69 @@ describe('Test: .is', function() {
 	// Hints: There is no official API from hongkongpost, but you may use web or other method to get the result easily.
 	// Time need: less than an hour if you find the correct way
 
-	// describe('Track @ hkpost(\'CP889331175HK\')', function() {
+	describe('Track @ hkpost(\'EA999580311HK\') — detailed tracking info', function() {
 
-	// 	var hkpost = {
-	// 		checkpoints: [
-	// 			{
-	// 				country_name: 'HK',
-	// 				message: 'Item posted.',
-	// 				checkpoint_time: '2013-12-11T00:00:00'
-	// 			},
-	// 			{
-	// 				country_name: 'HK',
-	// 				message: 'In transit.',
-	// 				checkpoint_time: '2013-12-12T00:00:00'
-	// 			},
-	// 			{
-	// 				country_name: 'HK',
-	// 				message: 'Processed for departure.',
-	// 				checkpoint_time: '2013-12-13T00:00:00'
-	// 			},
-	// 			{
-	// 				country_name: 'HK',
-	// 				message: 'The item left Hong Kong for its destination on  19-Dec-2013 ',
-	// 				checkpoint_time: '2013-12-17T00:00:00'
-	// 			},
-	// 			{
-	// 				country_name: 'NZ',
-	// 				message: 'Arrived.',
-	// 				checkpoint_time: '2014-01-14T00:00:00'
-	// 			},
-	// 			{
-	// 				country_name: 'NZ',
-	// 				message: 'In transit.',
-	// 				checkpoint_time: '2014-01-15T00:00:00'
-	// 			},
-	// 			{
-	// 				country_name: 'NZ',
-	// 				message: 'Delivered.',
-	// 				checkpoint_time: '2014-01-16T00:00:00'
-	// 			}
-	// 		]
-	// 	};
+		var hkpost_1 = {
+			checkpoints: [
+				{
+					checkpoint_time: "2014-07-31T00:00:00",
+					country_name: "United States of America",
+					message: "Delivered."
+				}, {
+					checkpoint_time: "2014-07-31T00:00:00",
+					country_name: "United States of America",
+					message: "Arrived the delivery office and is being processed."
+				}, {
+					checkpoint_time: "2014-07-29T00:00:00",
+					country_name: "United States of America",
+					message: "Arrived and is being processed."
+				}, {
+					checkpoint_time: "2014-07-28T00:00:00",
+					country_name: "Hong Kong",
+					message: "The item left Hong Kong for its destination on 29-Jul-2014"
+				}, {
+					checkpoint_time: "2014-07-28T00:00:00",
+					country_name: "Hong Kong",
+					message: "The item arrived at processing centre."
+				}, {
+					checkpoint_time: "2014-07-28T00:00:00",
+					country_name: "Hong Kong",
+					message: "Item posted and is being processed."
+				}
+			]
+		};
 
-	// 	it('Expect return true', function() {
-	// 		var result = Courier.hkpost('CP889331175HK');
-	// 		result.should.eql(hkpost);
-	// 	});
-	// });
+		it('Expect return true', function(done) {
+			this.timeout(5000);
+			var result = Courier.hkpost('EA999580311HK', function(err, result) {
+				if (err) return done(err);
+				result.should.eql(hkpost_1);
+				done();
+			});
+		});
+	});
+
+	describe('Track @ hkpost(\'RT215770195HK\') — limited tracking info', function() {
+
+		var hkpost_1 = {
+			checkpoints: [
+				{
+					checkpoint_time: "2014-07-06T00:00:00",
+					country_name: "Brazil",
+					message: "The item (RT215770195HK) left Hong Kong for its destination on 6-Jul-2014"
+				}
+			]
+		};
+
+		it('Expect return true', function(done) {
+			this.timeout(10000);
+			var result = Courier.hkpost('RT215770195HK', function(err, result) {
+				if (err) return done(err);
+				result.should.eql(hkpost_1);
+				done();
+			});
+		});
+	});
 
 	describe('Track @ dpduk(\'15502370264989N\')', function() {
 		// Courier: http://www.dpd.co.uk

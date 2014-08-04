@@ -1,20 +1,6 @@
 tools = require './tools'
 
 
-# from goo.gl/RyLeWV
-utc_date = (date_string) ->
-	date = new Date date_string
-	date = new Date Date.UTC(
-		date.getFullYear(),
-		date.getMonth(),
-		date.getDate(),
-		date.getHours(),
-		date.getMinutes(),
-		date.getSeconds())
-	date = date.toISOString()
-	date.substring(0, date.length-5)
-
-
 get_checkpoint = (checkpoint) ->
 	date_set = false
 	chunks = checkpoint.split ' at '
@@ -55,7 +41,7 @@ get_checkpoint = (checkpoint) ->
 			day_time = '12:00 am'
 			year = '1990'
 
-	date = utc_date "#{month_date} #{year} #{day_time}"
+	date = tools.utc_date "#{month_date} #{year} #{day_time}"
 
 	# return tracking object
 	country_name: ''
@@ -91,4 +77,4 @@ exports.usps = (tracking_number, callback) ->
 
 
 # Dev run command
-# this.usps('9405903699300184125060')
+# exports.usps('9405903699300184125060')
