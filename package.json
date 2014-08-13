@@ -26,7 +26,11 @@
 		"should": "latest",
 		"request": "latest",
 		"xml2js": "latest",
-		"cheerio": "latest"
+		"cheerio": "latest",
+		"fivebeans": "latest",
+		"winston": "latest",
+		"mongodb": "latest",
+		"redis": "latest"
 	},
 	"devDependencies": {
 		"mocha": "latest",

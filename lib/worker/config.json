@@ -1,0 +1,7 @@
+{
+	"id":   "worker_1",
+    "host": "127.0.0.1",
+    "port": 11300,
+    "tubes": ["requests_flow", "usps", "hkpost", "dpduk"],
+    "ignoreDefault": true
+}

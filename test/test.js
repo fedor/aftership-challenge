@@ -1,6 +1,6 @@
 var should = require('should'),
 	_ = require('underscore'),
-	Courier = require('../lib/index');
+	Courier = require('../lib/couriers/index');
 
 describe('Test: .is', function() {
 

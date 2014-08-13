@@ -9,12 +9,16 @@ get_checkpoint = (checkpoint) ->
 		# Most likely complex scenario without pre-formatted date string
 		try
 			message = chunks[0]
+			
 			chunks = chunks[1].split ' on '
 			day_time = chunks[0]
+			
 			chunks = chunks[1].split ', '
 			month_date = chunks[0]
+			
 			chunks = chunks[1].split ' '
 			year = chunks[0]
+			
 			date_set = true
 		catch
 			# Ensure we are not "falling apart",
@@ -64,8 +68,9 @@ exports.usps = (tracking_number, callback) ->
 
 		try
 			track_info = body.TrackResponse.TrackInfo[0]
+			
+			points        = track_info.TrackDetail.reverse()
 			track_summary = track_info.TrackSummary[0]
-			points = track_info.TrackDetail.reverse()
 			points.push track_summary
 			
 			# Get checkpoints in desired object model
