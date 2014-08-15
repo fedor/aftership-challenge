@@ -59,7 +59,7 @@ Both *requests_flow* and *wait_list* tube handlers relies on Redis to ensure lim
 | sec_calls:slug           | calls number performed during 1 second period                                |
 | wait_list_activated:slug | a flag to ensure that only one slug worker served waiting requests at a time |
 
-To ensure that workers executions would not be block in case of previous workers failure the following expiration periods are set to each Redis keys:
+To ensure that workers executions would not be blocked in case of previous workers failure the following expiration periods are set to each Redis keys:
 
 | Redis key                | Expication period                                                              |
 | ------------------------ | ------------------------------------------------------------------------------ |
