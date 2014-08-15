@@ -51,19 +51,21 @@ The code that schedules requests:
 **Notes:**
 
 Both *requests_flow* and *wait_list* tube handlers relies on Redis to ensure limits requirements and avoid race conditions. The following Redis keys are used:
-|Redis key|Description|
-|---|---|
-|wait_list:slug|list of slug tracking numbers in chronological order|
-|calls_number:slug|total calls number that happens now for specific slug|
-|sec_calls:slug|calls number performed during 1 second period|
-|wait_list_activated:slug|a flag to ensure that only one slug worker served waiting requests at a time|
+
+| Redis key                | Description                                                                  |
+| ------------------------ | ---------------------------------------------------------------------------- |
+| wait_list:slug           | list of slug tracking numbers in chronological order                         |
+| calls_number:slug        | total calls number that happens now for specific slug                        |
+| sec_calls:slug           | calls number performed during 1 second period                                |
+| wait_list_activated:slug | a flag to ensure that only one slug worker served waiting requests at a time |
 
 To ensure that workers executions would not be block in case of previous workers failure the following expiration periods are set to each Redis keys:
-|Redis key|Expication period|
-|---|---|
-|wait_list:slug|no expire|
-|calls_number:slug|60 seconds after each new tracking number was added|
-|sec_calls:slug|1 second|
-|wait_list_activated:slug|a number of seconds equals to delay of last scheduled call of *wait_list* tube|
+
+| Redis key                | Expication period                                                              |
+| ------------------------ | ------------------------------------------------------------------------------ |
+| wait_list:slug           | no expire                                                                      |
+| calls_number:slug        | 60 seconds after each new tracking number was added                            |
+| sec_calls:slug           | 1 second                                                                       |
+| wait_list_activated:slug | a number of seconds equals to delay of last scheduled call of *wait_list* tube |
 
  
