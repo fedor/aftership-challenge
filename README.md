@@ -1,78 +1,69 @@
-# Get Tracking info from Courier
+AfterShip Queue Challange Solution
+----------------------------------
 
-The goal of this challenge is to get the tracking information from the courier's system.
+## Interface
 
-There are 3 tests:
+Queue accepts tracking requests via Beanstalkd jobs and saves results to MongoDB.
+To add a job to queue submit a job to *requests_flow* tube the following payload:
 
-```
+    {"type": "requests_flow",
+     "payload": {"slug":   "<slug name>",
+                 "number": "<tracking number>"}}
 
-www.usps.com: 9102999999302024326992
-www.hongkongpost.com: CP889331175HK
-www.dpd.co.uk: 15502370264989N
+To get result reference to MongoDB *bucket* database, *tracking* collection.
+
+## How it works
+### Overview
+
+Queue instance is called worker and can be run on different machines at the same time. In order for workers to work together they need to share common **MongoDB, Redis and Beanstalkd servers.**
+
+ - Reach the worker code directory at lib/worker
+ - Run worker by **$: ./worker.js**
+
+### Beanstalkd Tubes
+
+Each worker serves 2 Beanstalkd tubes:
+
+ - requests_flow
+ - wait_list
+
+**requests_flow** tube receives user tracking requests (see Interface section above). If user request fits in workers limitations (max. 20 simultaneous calls to couriers and 2 calls per. second) it calls logic to get tracking info
+
+    Courier[slug](tracking_number, courier_callback...)
+
+if request falls beyond limits its tracking number is pushed to Redis *wait_list:slug_name* list and adds a job to *wait_list* tube.
+
+**wait_list** tube aims to empty the Redis *wait_list:...* within worker limits. After being initiated it performs the following steps:
+
+ - Check *wait_list_activated:...* flag from Redis. Sets it up if not already. Only one worker can work on specific *wait_list:...* at the same time.
+ - Checks *wait_list:...* length and sets appropriate numbers of attempts to get the first element of the list *e.g.: 2 calls at 1st sec, 2 calls at 2nd sec, etc.*
+
+The code that schedules requests:
+
+    for sec in [1..seconds]
+		for call in [1..calls_per_sec]
+			setTimeout get_wait_request(slug), sec*1000
 
 
-More Samples:
-www.usps.com
-9400109699939938223564
-9374889949033131111143
-9405509699939943080223
+ - Schedules *wait_list* tube job (recursive call) after scheduled jobs. The tube logic would be repeated until *wait_list:...* is not empty.
+ - **get_wait_request** callback calls logic to get tracking info if number of calls < 20
 
+**Notes:**
 
-www.hongkongpost.com
-RC933607107HK
-RT224265042HK
-LK059460815HK
+Both *requests_flow* and *wait_list* tube handlers relies on Redis to ensure limits requirements and avoid race conditions. The following Redis keys are used:
+|Redis key|Description|
+|---|---|
+|wait_list:slug|list of slug tracking numbers in chronological order|
+|calls_number:slug|total calls number that happens now for specific slug|
+|sec_calls:slug|calls number performed during 1 second period|
+|wait_list_activated:slug|a flag to ensure that only one slug worker served waiting requests at a time|
 
+To ensure that workers executions would not be block in case of previous workers failure the following expiration periods are set to each Redis keys:
+|Redis key|Expication period|
+|---|---|
+|wait_list:slug|no expire|
+|calls_number:slug|60 seconds after each new tracking number was added|
+|sec_calls:slug|1 second|
+|wait_list_activated:slug|a number of seconds equals to delay of last scheduled call of *wait_list* tube|
 
-www.ups.com
-1Z602A6E0315093333
-1ZE155W1YW70248655
-1ZE155W1YW70248520
-1Z17R06A0367864113
-
-www.dpd.co.uk
-15501498140350
-15501733652085
-07081002031105O
-
-
-```
-
-
-## The Output Format
-
-The first thing you should do is read `test/index.js`. It is the **canonical reference**. As long as your crawler correctly implements the reference tests, it is considered a correct solution.
-
-
-# Usage
-
-## Instructions
-
-1. Clone this repository to your own Github `public` repository and development machine. Do NOT fork, as other candidates would be able to see your solution. Do preserve commit history so it is easy for us to add your repository as a remote.
-2. Send us a link to the public repository you used and an estimate of how long you will take
-3. Run `npm install`
-4. Implement `Courier` in `lib/index.js`
-5. Ensure all tests pass in node via `npm test`
-6. When finished, send us an email to ask for a review
-7. You may modify the test case, or using other tracking number. as the tracking number in the test case may be expired.
-
-## Hints
-
-* Before starting, try to see how AfterShip API work, you will get a better idea what tracking info should return.
-* You can use ANY method to get the tracking result, including API, web crawler, or even you paid someone else to code for you. LoL
-
-## Scoring
-
-There is no scoring at all.
-
-What we want to know is HOW do you solve the problems.
-
-However,
-
-**You will be graded on how easy-to-{read,maintain,verify} your code and documentation are.** Really think from the perspective of what would happen if we had to actually integrate your code into our production environment.
-
-Ideally your solution is **easily extensible** as we add additional types of test cases.
-
-## Problem?
-Contact us at jobs AT aftership.com
-
+ 
