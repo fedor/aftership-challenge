@@ -94,7 +94,7 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 		(err, tracking) ->
 			try
 				if err
-					logger.error "Issue in courier callback: #{err}"
+					logger.error "issue in courier callback: #{err}"
 					return bean_callback 'error'
 
 				slug         = payload.slug
@@ -118,6 +118,9 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 					tracking.slug = slug
 					tracking.tracking_number = number
 					db.collection('tracking').insert tracking, (err, docs) ->
+						if err
+							logger.error "insertion to Mongo DB failed: #{err}"
+							return bean_callback 'error'
 						delta_time = new Date().getTime() - start_time
 						logger.info "#{slug} - #{number} delivered and saved to mongo,\
 						             took #{delta_time} ms. (#{start_time})"
@@ -129,7 +132,7 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 				# 5. Finish the job
 				bean_callback 'success'
 			catch error
-				logger.error "Issue on handling courier callback data: #{error}"
+				logger.error "issue on handling courier callback data: #{error}"
 				return bean_callback 'error'
 
 	RequestsFlowHandler.prototype.work = (payload, callback) ->
@@ -162,7 +165,7 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 				redis_multi.expire "calls_number:#{slug}", 60
 				redis_multi.incr   "sec_calls:#{slug}"
 				if sec_calls == 0
-					redis_multi.expire "sec_calls", 1
+					redis_multi.expire "sec_calls:#{slug}", 1
 				redis_multi.exec (err, replies) ->
 					throw err if err
 					try
