@@ -45,18 +45,28 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 			this.type = 'wait_list'  # Same as tube name
 
 
+		start_time = () ->
+			start_time = new Date().getTime()
+			logger.info "Getting tracking of #{slug} - #{payload.number} (#{start_time})"
+			return start_time
+
+
 		get_wait_request = (slug) ->
 			() ->
 				redis_client.get "calls_number:#{slug}", (calls_number, err) ->
 					if calls_number >= max_calls_number
 						return
 
-					redis_client.lpop "wait_list:#{slug}", (number, err) ->
+					redis_client.lpop "wait_list:#{slug}", (err, number) ->
 						if number == null
 							return
-						start_time = new Date().getTime()
-						logger.info "Getting tracking of #{slug} - #{number} (#{start_time}), wait line"
-						Courier[slug] tracking_number, courier_callback(callback, {slug: slug, number: number}, start_time)
+						payload = {slug: slug, number: number}
+						Courier[slug] tracking_number, courier_callback(callback, payload, start_time())
+
+
+		error_callback = (error, message, callback) ->
+			logger.error "#{message}: #{error}"
+			callback 'error'
 
 
 		WaitListHandler.prototype.work = (payload, callback) ->
@@ -69,8 +79,9 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 					return callback 'success'
 				
 				redis_multi = redis_client.multi()
-				redis_multi.set  "wait_list_activated:#{slug}", 1, 10
-				redis_multi.llen "wait_list:#{slug}"
+				redis_multi.set    "wait_list_activated:#{slug}", 1
+				redis_multi.expire "wait_list_activated:#{slug}", 10
+				redis_multi.llen   "wait_list:#{slug}"
 				redis_multi.exec (err, replies) ->
 					if err == null and replies == null
 						# Race condition, someone activated wait list first
@@ -146,51 +157,37 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 				# 2. Get number of calls per second
 				redis_multi = redis_client.multi()
 				redis_multi.llen "wait_list:#{slug}"
-				redis_multi.get  "calls_number:#{slug}"
-				redis_multi.get  "sec_calls:#{slug}"
+				redis_multi.incr "calls_number:#{slug}"
+				redis_multi.incr "sec_calls:#{slug}"
 				redis_multi.exec (err, replies) ->
-					wait_count   = parseInt(replies[0])
-					calls_number = if replies[1] == null then 0 else parseInt(replies[1])
-					sec_calls    = if replies[2] == null then 0 else parseInt(replies[2])
+					try
+						return error_callback(err, "redis error", callback) if err
 
-					# 3. If a number of max semultaneous calls per slug reached
-					# or if we out of "per second" quota add request to waiting line
-					if wait_count > 0 or calls_number >= max_calls_number or sec_calls >= calls_per_sec
-						add_request_to_waiting_line payload
-						return callback 'success'
+						wait_count   = parseInt(replies[0])
+						calls_number = replies[1]
+						sec_calls    = replies[2]
 
-					# 4. Perform getting track info
-					# 4.1 Increment total calls number
-					# 4.2 Increment current second calls number
-					redis_multi = redis_client.multi()
-					redis_multi.incr   "calls_number:#{slug}"
-					redis_multi.expire "calls_number:#{slug}", 60
-					redis_multi.incr   "sec_calls:#{slug}"
-					if sec_calls == 0
-						redis_multi.expire "sec_calls:#{slug}", 1
-					redis_multi.exec (err, replies) ->
-						throw err if err
-						try
-							calls_number = if replies[0] == null then 0 else parseInt(replies[0])
-							sec_calls    = if replies[1] == null then 0 else parseInt(replies[1])
+						if sec_calls == 1
+							redis_client.expire "sec_calls:#{slug}", 1
 
-							# 4.3 Check if race condition occured, if yes retry request in 1 sec
-							if calls_number > max_calls_number or sec_calls > calls_per_sec
-								beans_tools.put_wrap beans_client, 'requests_flow', 0, 1, 60, payload
-								redis_client.decr "calls_number:#{slug}"
+						# 3. If a number of max semultaneous calls per slug reached
+						# or if we out of "per second" quota add request to waiting line
+						if wait_count > 0 or calls_number > max_calls_number or sec_calls > calls_per_sec
+							redis_multi.decr "calls_number:#{slug}"
+							redis_multi.decr "sec_calls:#{slug}"
+							redis_multi.exec (err, replies) ->
+								return error_callback(err, "redis error", callback) if err
+								add_request_to_waiting_line payload
 								return callback 'success'
-								
-							# 4.4 Job reserved, get tracking info
-							start_time = new Date().getTime()
-							logger.info "Getting tracking of #{slug} - #{payload.number} (#{start_time})"
-							Courier[slug] payload.number, courier_callback(callback, payload, start_time)
-						catch
-							# Something bad happend, retry in 1 sec
-							redis_client.decr "calls_number:#{slug}"
-							beans_tools.put_wrap beans_client, 'requests_flow', 0, 1, 60, payload
+							return
+
+						# 4 Job reserved, get tracking info
+						Courier[slug] payload.number, courier_callback(callback, payload, start_time())
+					catch error
+						error_callback(error, "issue on handling requests_flow tube", callback)
+
 			catch error
-				logger.error "Issue on handling requests_flow tube: #{error}"
-				return callback 'error'
+				error_callback(error, "issue on handling requests_flow tube", callback)
 
 		# Run Beanstalkd worker
 		config.handlers = 
