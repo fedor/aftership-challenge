@@ -47,7 +47,7 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 
 		start_time = (payload) ->
 			start_time_ = new Date().getTime()
-			logger.info "\tgetting tracking of #{payload.slug} - #{payload.number} (#{start_time_})"
+			logger.info "\t---> getting tracking of #{payload.slug} - #{payload.number} (#{start_time_})"
 			return start_time_
 
 
@@ -57,6 +57,7 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 					return error_callback(err, "redis error", ()->) if err
 					try
 						# check if there is a room for a call
+						calls_number = int_from_redis calls_number
 						if calls_number >= max_calls_number
 							logger.info "\tscheduled call from wait_list:#{slug} cancelled,
 								#{calls_number} appears at the moment"
@@ -64,15 +65,24 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 
 						redis_client.lpop "wait_list:#{slug}", (err, number) ->
 							return error_callback(err, "redis error", ()->) if err
-							try
-								return if number == null
-								payload = {slug: slug, number: number}
-								stub_cb = () ->
-								start_time_ = start_time payload
-								callback = courier_callback stub_cb, payload, start_time_
-								Courier[slug] number, callback
-							catch error
-								error_callback(error, "get_wait_request (wait handler callback) error", ()->)
+							return if number == null
+
+							redis_multi = redis_client.multi()
+							redis_multi.incr   "calls_number:#{slug}"
+							redis_multi.expire "calls_number:#{slug}", 30
+							redis_multi.exec (err, replies) ->
+								return error_callback(err, "redis error", ()->) if err
+								try	
+									calls_number = int_from_redis replies[0]
+									
+									logger.info "\tactive calls number for #{slug} increased to #{calls_number} by wait_list"
+									payload = {slug: slug, number: number}
+									stub_cb = () ->
+									start_time_ = start_time payload
+									callback = courier_callback stub_cb, payload, start_time_
+									Courier[slug] number, callback
+								catch error
+									error_callback(error, "get_wait_request (wait handler callback) error", ()->)
 					catch error
 						error_callback(error, "get_wait_request (wait handler callback) error", ()->)
 
@@ -94,8 +104,8 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 			redis_multi.exec (err, replies) ->
 				return error_callback(err, "redis error", callback) if err
 				try
-					activated = replies[0]
-					len = replies[1]
+					activated = int_from_redis replies[0]
+					len       = int_from_redis replies[1]
 
 					# Check if wait list already activated
 					if activated > 1 and len > 0
@@ -136,12 +146,15 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 		courier_callback = (bean_callback, payload, start_time) ->
 			(err, tracking) ->
 				try
-					redis_client.decr "calls_number:#{slug}"
-					return error_callback(err, "issue in courier callback", bean_callback) if err
-
 					slug         = payload.slug
 					number       = payload.number
 
+					redis_client.decr "calls_number:#{slug}", (err, calls_number) ->
+						return error_callback(err, "redis error", bean_callback) if err	
+						logger.info "\tactive calls number for #{slug} decreased to #{calls_number}"
+
+					return error_callback(err, "issue in courier callback", bean_callback) if err
+					
 					checkpoints  = tracking.checkpoints
 					last_point   = checkpoints[checkpoints.length-1]
 					last_country = last_point.country_name.toLowerCase()
@@ -162,12 +175,12 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 						db.collection('tracking').insert tracking, (err, docs) ->
 							return error_callback(err, "insertion to Mongo DB failed", bean_callback) if err
 							delta_time = new Date().getTime() - start_time
-							logger.info "\t#{slug} - #{number} delivered and saved to mongo,
+							logger.info "\t<--- #{slug} - #{number} delivered and saved to mongo,
 							             took #{delta_time} ms. (#{start_time})"
 					else
 						beans_tools.put_wrap beans_client, 'requests_flow', 0, 3600*3, 60, payload, 'requests_flow'
 						delta_time = new Date().getTime() - start_time
-						logger.info "\t#{slug} - #{number} is not delivered yet,
+						logger.info "\t<--- #{slug} - #{number} is not delivered yet,
 						             took #{delta_time} ms. (#{start_time})"
 
 					# 5. Finish the job
@@ -175,6 +188,8 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 				catch error
 					error_callback(error, "issue on handling courier callback data", bean_callback)
 
+		int_from_redis = (reply) ->
+			return if reply == null then 0 else reply
 
 		RequestsFlowHandler.prototype.work = (payload, callback) ->
 			try
@@ -185,32 +200,53 @@ MongoClient.connect 'mongodb://127.0.0.1:27017/bucket', (err, db) ->
 				# 2. Get number of calls per second
 				redis_multi = redis_client.multi()
 				redis_multi.llen "wait_list:#{slug}"
-				redis_multi.incr "calls_number:#{slug}"
-				redis_multi.incr "sec_calls:#{slug}"
+				redis_multi.get  "calls_number:#{slug}"
+				redis_multi.get  "sec_calls:#{slug}"
 				redis_multi.exec (err, replies) ->
 					return error_callback(err, "redis error", callback) if err
 					try
-						wait_count   = parseInt(replies[0])
-						calls_number = replies[1]
-						sec_calls    = replies[2]
+						wait_count   = int_from_redis replies[0]
+						calls_number = int_from_redis replies[1]
+						sec_calls    = int_from_redis replies[2]
 
-						if sec_calls == 1
-							redis_client.expire "sec_calls:#{slug}", 1
+						if wait_count > 0 or calls_number >= max_calls_number or sec_calls >= calls_per_sec
+							add_request_to_waiting_line payload
+							return callback 'success'
 
-						# 3. If a number of max semultaneous calls per slug reached
-						# or if we out of "per second" quota add request to waiting line
-						if wait_count > 0 or calls_number > max_calls_number or sec_calls > calls_per_sec
-							# Roll back
-							redis_multi.decr "calls_number:#{slug}"
-							redis_multi.decr "sec_calls:#{slug}"
-							redis_multi.exec (err, replies) ->
-								return error_callback(err, "redis error", callback) if err
-								add_request_to_waiting_line payload
-								return callback 'success'
-							return
+						redis_multi = redis_client.multi()
+						redis_multi.llen "wait_list:#{slug}"
+						redis_multi.incr "calls_number:#{slug}"
+						redis_multi.incr "sec_calls:#{slug}"
+						redis_multi.expire "calls_number:#{slug}", 30
+						if sec_calls == 0
+							redis_multi.expire "sec_calls:#{slug}", 1
+						redis_multi.exec (err, replies) ->
+							return error_callback(err, "redis error", callback) if err
+							try
+								wait_count   = int_from_redis replies[0]
+								calls_number = int_from_redis replies[1]
+								sec_calls    = int_from_redis replies[2]
 
-						# 4 Job reserved, get tracking info
-						Courier[slug] payload.number, courier_callback(callback, payload, start_time(payload))
+								logger.info "\tactive calls number for #{slug} increased to #{calls_number}"
+
+								# 3. If a number of max semultaneous calls per slug reached
+								# or if we out of "per second" quota add request to waiting line
+								if wait_count > 0 or calls_number > max_calls_number or sec_calls > calls_per_sec
+									# Roll back
+									redis_multi.decr "calls_number:#{slug}"
+									redis_multi.decr "sec_calls:#{slug}"
+									redis_multi.exec (err, replies) ->
+										return error_callback(err, "redis error", callback) if err
+										add_request_to_waiting_line payload
+										return callback 'success'
+									return
+
+								# 4 Job reserved, get tracking info
+								stub_cb = () ->
+								Courier[slug] payload.number, courier_callback(stub_cb, payload, start_time(payload))
+								callback 'success'
+							catch error
+								error_callback(error, "issue on handling requests_flow tube", callback)
 					catch error
 						error_callback(error, "issue on handling requests_flow tube", callback)
 			catch error
