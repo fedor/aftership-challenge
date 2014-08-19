@@ -2,6 +2,7 @@ request = require 'request'
 cheerio = require 'cheerio'
 {parseString} = require 'xml2js'
 
+request = request.defaults {timeout: 30}
 
 # from goo.gl/RyLeWV
 exports.utc_date = (date_string) ->
